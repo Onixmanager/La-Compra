@@ -7,14 +7,14 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/Onixmanager/La-Compra/main/192logo.webp",
+      "src": "https://raw.githubusercontent.com/Onixmanager/La-Compra/refs/heads/main/192logo.jpg",
       "sizes": "192x192",
-      "type": "image/webp"
+      "type": "image/jpg"
     },
     {
-      "src": "https://raw.githubusercontent.com/Onixmanager/La-Compra/main/512Logo.webp",
+      "src": "https://raw.githubusercontent.com/Onixmanager/La-Compra/refs/heads/main/512Logo.jpg",
       "sizes": "512x512",
-      "type": "image/webp"
+      "type": "image/jpg"
     }
   ]
 }
