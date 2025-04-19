@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>La Compra - Gestor Inteligente de Alimentos</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --secondary: #10B981;
+            --accent: #F59E0B;
+            --danger: #EF4444;
+            --dark: #1F2937;
+            --light: #F9FAFB;
+            --gray: #9CA3AF;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f5f5f5;
+            color: var(--dark);
+            overflow-x: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 100vw;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .app-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 1rem;
+            position: relative;
+            z-index: 20;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+        }
+        
+        .app-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+            padding-bottom: 5rem;
+        }
+        
+        .app-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            background: white;
+            padding: 0.75rem 0.5rem;
+            box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.1), 0 -2px 4px -1px rgba(0,0,0,0.06);
+            z-index: 20;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray);
+            transition: all 0.3s ease;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+        
+        .nav-item.active {
+            color: var(--primary);
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+        
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease-in-out;
+            padding: 1rem;
+            overflow-y: auto;
+            padding-bottom: 5rem;
+        }
+        
+        .page.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .fab {
+            position: fixed;
+            bottom: 5rem;
+            right: 1.5rem;
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+            cursor: pointer;
+            z-index: 15;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .fab:active {
+            transform: scale(0.95);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            transform-origin: center;
+            animation: cardAppear 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .card:active {
+            transform: scale(0.98);
+        }
+        
+        .product-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            margin-bottom: 0.5rem;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .product-item:nth-child(even) {
+            background-color: rgba(249, 250, 251, 0.5);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 1rem;
+            width: 85%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 1.5rem;
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+        
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--gray);
+            margin-top: 0.25rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: var(--dark);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .badge-primary {
+            background-color: rgba(79, 70, 229, 0.1);
+            color: var(--primary);
+        }
+        
+        .badge-secondary {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--secondary);
+        }
+        
+        .badge-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+        
+        .badge-warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--accent);
+        }
+        
+        .category-pill {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .category-pill.active {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray);
+            height: 60vh;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .progress-bar {
+            height: 0.5rem;
+            background-color: #e5e7eb;
+            border-radius: 9999px;
+            overflow: hidden;
+            margin-top: 0.25rem;
+        }
+        
+        .progress-value {
+            height: 100%;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            transition: width 0.3s ease;
+        }
+        
+        .swipe-action {
+            position: absolute;
+            top: 0;
+            right: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+        
+        .swipe-action-btn {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 1rem;
+            color: white;
+        }
+        
+        .delete-action {
+            background-color: var(--danger);
+        }
+        
+        .edit-action {
+            background-color: var(--primary);
+        }
+        
+        .list-item {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .list-item-content {
+            transition: transform 0.3s ease;
+            background-color: white;
+            position: relative;
+            z-index: 5;
+        }
+        
+        @keyframes cardAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        .animated-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+            background-size: 200% 200%;
+            animation: shimmer 1.5s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 200% 200%; }
+        }
+        
+        .custom-checkbox {
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 0.25rem;
+            border: 2px solid var(--gray);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .custom-checkbox.checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .custom-checkbox.checked::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            color: white;
+            font-size: 0.75rem;
+        }
+        
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(-2rem);
+            background-color: white;
+            color: var(--dark);
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+            z-index: 50;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.success {
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+        
+        .toast.info {
+            border-left: 4px solid var(--primary);
+        }
+        
+        /* Quantity selector */
+        .quantity-selector {
+            display: flex;
+            align-items: center;
+        }
+        
+        .quantity-btn {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background-color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .quantity-btn:active {
+            transform: scale(0.95);
+            background-color: #e5e7eb;
+        }
+        
+        .quantity-value {
+            width: 2rem;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        /* Loader */
+        .loader {
+            width: 2rem;
+            height: 2rem;
+            border: 3px solid rgba(79, 70, 229, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <header class="app-header">
+            <div class="flex justify-between items-center">
+                <h1 class="text-xl font-bold">La Compra</h1>
+                <div id="headerActions" class="flex gap-3">
+                    <div id="searchToggle" class="cursor-pointer">
+                        <i class="fas fa-search text-lg"></i>
+                    </div>
+                    <div id="menuToggle" class="cursor-pointer">
+                        <i class="fas fa-ellipsis-v text-lg"></i>
+                    </div>
+                </div>
+            </div>
+            <div id="searchBar" class="mt-3 hidden">
+                <input type="text" placeholder="Buscar productos..." class="w-full px-4 py-2 rounded-full text-gray-800 bg-white focus:outline-none">
+            </div>
+        </header>
+        
+        <main class="app-content">
+            <!-- Productos Base Page -->
+            <div id="basePage" class="page active">
+                <div class="mb-4">
+                    <div class="flex overflow-x-auto pb-2" id="categoryFilters">
+                        <div class="category-pill active" data-category="all">Todos</div>
+                        <div class="category-pill" data-category="frutas">Frutas</div>
+                        <div class="category-pill" data-category="verduras">Verduras</div>
+                        <div class="category-pill" data-category="lacteos">Lácteos</div>
+                        <div class="category-pill" data-category="carnes">Carnes</div>
+                        <div class="category-pill" data-category="pescados">Pescados</div>
+                        <div class="category-pill" data-category="congelados">Congelados</div>
+                        <div class="category-pill" data-category="bebidas">Bebidas</div>
+                        <div class="category-pill" data-category="otros">Otros</div>
+                    </div>
+                </div>
+                
+                <div id="baseProductsList" class="pb-4"></div>
+                
+                <div id="emptyBaseProducts" class="empty-state hidden">
+                    <i class="fas fa-box-open"></i>
+                    <h3 class="text-lg font-medium mb-2">No hay productos base</h3>
+                    <p class="text-sm mb-4">Agrega productos básicos para comenzar a gestionar tu despensa</p>
+                    <button class="btn btn-primary" id="emptyAddBtn">
+                        <i class="fas fa-plus mr-2"></i>Agregar Producto
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Control Stock Page -->
+            <div id="stockPage" class="page">
+                <div class="card mb-4">
+                    <h2 class="text-lg font-semibold mb-3">Resumen de inventario</h2>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-blue-50 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500">Productos en Stock</div>
+                            <div class="text-xl font-bold text-blue-600" id="totalProductsStock">0</div>
+                        </div>
+                        <div class="bg-green-50 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500">Artículos disponibles</div>
+                            <div class="text-xl font-bold text-green-600" id="totalItemsAvailable">0</div>
+                        </div>
+                        <div class="bg-yellow-50 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500">Por agotarse</div>
+                            <div class="text-xl font-bold text-yellow-600" id="lowStockCount">0</div>
+                        </div>
+                        <div class="bg-red-50 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500">Agotados</div>
+                            <div class="text-xl font-bold text-red-600" id="outOfStockCount">0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h2 class="text-lg font-semibold mb-2">Gestión de stock</h2>
+                    <div class="flex overflow-x-auto gap-2 pb-2" id="stockFilters">
+                        <div class="category-pill active" data-filter="all">Todos</div>
+                        <div class="category-pill" data-filter="available">Disponibles</div>
+                        <div class="category-pill" data-filter="low">Por agotarse</div>
+                        <div class="category-pill" data-filter="out">Agotados</div>
+                    </div>
+                </div>
+                
+                <div id="stockProductsList" class="pb-4"></div>
+                
+                <div id="emptyStock" class="empty-state hidden">
+                    <i class="fas fa-cubes"></i>
+                    <h3 class="text-lg font-medium mb-2">No hay productos en stock</h3>
+                    <p class="text-sm mb-4">Agrega productos a tu inventario para comenzar a controlar tu despensa</p>
+                    <button class="btn btn-primary" id="goToBaseBtn">
+                        <i class="fas fa-boxes mr-2"></i>Ir a Productos Base
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Lista de Compra Page -->
+            <div id="shoppingPage" class="page">
+                <div class="card mb-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-lg font-semibold">Lista de compra</h2>
+                        <div class="flex gap-2">
+                            <button id="generateListBtn" class="btn btn-primary text-sm px-3 py-1">
+                                <i class="fas fa-sync-alt mr-1"></i> Generar
+                            </button>
+                            <button id="clearListBtn" class="btn btn-secondary text-sm px-3 py-1">
+                                <i class="fas fa-trash-alt mr-1"></i> Limpiar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-500 mb-2">
+                        Productos a comprar basados en tu inventario
+                    </div>
+                </div>
+                
+                <div id="shoppingList" class="pb-4"></div>
+                
+                <div id="emptyShoppingList" class="empty-state">
+                    <i class="fas fa-shopping-basket"></i>
+                    <h3 class="text-lg font-medium mb-2">Tu lista de compras está vacía</h3>
+                    <p class="text-sm mb-4">Genera una nueva lista basada en tus productos agotados o con poco stock</p>
+                    <button class="btn btn-primary" id="generateEmptyListBtn">
+                        <i class="fas fa-sync-alt mr-2"></i>Generar Lista
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Configuración Page -->
+            <div id="settingsPage" class="page">
+                <div class="card mb-4">
+                    <h2 class="text-lg font-semibold mb-3">Configuración</h2>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tema de la aplicación</label>
+                        <div class="flex gap-2">
+                            <button class="btn btn-primary text-sm">Claro</button>
+                            <button class="btn btn-secondary text-sm">Oscuro</button>
+                            <button class="btn btn-secondary text-sm">Sistema</button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Notificaciones</label>
+                        <div class="flex items-center">
+                            <div class="custom-checkbox checked mr-2"></div>
+                            <span>Alertas de stock bajo</span>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Umbral de stock bajo</label>
+                        <input type="range" min="1" max="10" value="3" class="w-full" id="lowStockThreshold">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>1</span>
+                            <span id="thresholdValue">3</span>
+                            <span>10</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <h2 class="text-lg font-semibold mb-3">Datos de la aplicación</h2>
+                    <div class="mb-3">
+                        <button class="btn btn-secondary w-full mb-2" id="exportDataBtn">
+                            <i class="fas fa-file-export mr-2"></i>Exportar datos
+                        </button>
+                        <button class="btn btn-secondary w-full mb-2" id="importDataBtn">
+                            <i class="fas fa-file-import mr-2"></i>Importar datos
+                        </button>
+                        <button class="btn btn-danger w-full" id="clearDataBtn">
+                            <i class="fas fa-trash-alt mr-2"></i>Borrar todos los datos
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <h2 class="text-lg font-semibold mb-3">Acerca de</h2>
+                    <p class="text-sm text-gray-600 mb-2">La Compra - Gestor Inteligente de Alimentos</p>
+                    <p class="text-sm text-gray-600 mb-2">Versión 1.0.0</p>
+                    <p class="text-sm text-gray-600">© 2023 La Compra App</p>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Floating Action Button -->
+        <div class="fab" id="addButton">
+            <i class="fas fa-plus"></i>
+        </div>
+        
+        <!-- Navigation Bar -->
+        <nav class="app-nav">
+            <div class="nav-item active" data-page="basePage">
+                <i class="fas fa-box-open"></i>
+                <span class="text-xs mt-1">Productos</span>
+            </div>
+            <div class="nav-item" data-page="stockPage">
+                <i class="fas fa-cubes"></i>
+                <span class="text-xs mt-1">Stock</span>
+            </div>
+            <div class="nav-item" data-page="shoppingPage">
+                <i class="fas fa-shopping-basket"></i>
+                <span class="text-xs mt-1">Compra</span>
+            </div>
+            <div class="nav-item" data-page="settingsPage">
+                <i class="fas fa-cog"></i>
+                <span class="text-xs mt-1">Ajustes</span>
+            </div>
+        </nav>
+    </div>
+    
+    <!-- Product Form Modal -->
+    <div class="modal-overlay" id="productModal">
+        <div class="modal">
+            <h3 class="text-xl font-semibold mb-4" id="modalTitle">Agregar producto</h3>
+            <form id="productForm">
+                <div class="input-group">
+                    <label for="productName" class="block text-sm font-medium text-gray-700">Nombre del producto</label>
+                    <input type="text" id="productName" name="name" class="form-input" required>
+                </div>
+                <div class="input-group">
+                    <label for="productCategory" class="block text-sm font-medium text-gray-700">Categoría</label>
+                    <select id="productCategory" name="category" class="form-input" required>
+                        <option value="">Seleccionar categoría</option>
+                        <option value="frutas">Frutas</option>
+                        <option value="verduras">Verduras</option>
+                        <option value="lacteos">Lácteos</option>
+                        <option value="carnes">Carnes</option>
+                        <option value="pescados">Pescados</option>
+                        <option value="congelados">Congelados</option>
+                        <option value="bebidas">Bebidas</option>
+                        <option value="otros">Otros</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="productUnit" class="block text-sm font-medium text-gray-700">Unidad de medida</label>
+                    <select id="productUnit" name="unit" class="form-input" required>
+                        <option value="">Seleccionar unidad</option>
+                        <option value="unidad">Unidad</option>
+                        <option value="kg">Kilogramos</option>
+                        <option value="g">Gramos</option>
+                        <option value="l">Litros</option>
+                        <option value="ml">Mililitros</option>
+                        <option value="paquete">Paquete</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="productMinStock" class="block text-sm font-medium text-gray-700">Stock mínimo</label>
+                    <input type="number" id="productMinStock" name="minStock" class="form-input" min="0" required>
+                </div>
+                <div class="input-group" id="stockQuantityGroup">
+                    <label for="productStock" class="block text-sm font-medium text-gray-700">Cantidad actual</label>
+                    <input type="number" id="productStock" name="stock" class="form-input" min="0" required>
+                </div>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button type="button" class="btn btn-secondary" id="cancelProductBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="saveProductBtn">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Stock Update Modal -->
+    <div class="modal-overlay" id="stockModal">
+        <div class="modal">
+            <h3 class="text-xl font-semibold mb-4">Actualizar stock</h3>
+            <div class="mb-4">
+                <h4 class="text-lg font-medium mb-1" id="stockProductName">Nombre del producto</h4>
+                <p class="text-sm text-gray-600 mb-2" id="stockProductCategory">Categoría</p>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Stock actual</label>
+                <div class="flex items-center justify-center">
+                    <div class="quantity-btn" id="decreaseStock">
+                        <i class="fas fa-minus"></i>
+                    </div>
+                    <input type="number" id="stockQuantity" class="form-input mx-2 text-center w-20" min="0" value="0">
+                    <div class="quantity-btn" id="increaseStock">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-4">
+                <button class="btn btn-secondary" id="cancelStockBtn">Cancelar</button>
+                <button class="btn btn-primary" id="saveStockBtn">Guardar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirm Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+            <h3 class="text-xl font-semibold mb-4" id="confirmTitle">Confirmación</h3>
+            <p class="mb-6" id="confirmMessage">¿Estás seguro de que deseas realizar esta acción?</p>
+            <div class="flex justify-end gap-3">
+                <button class="btn btn-secondary" id="cancelConfirmBtn">Cancelar</button>
+                <button class="btn btn-danger" id="confirmActionBtn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">Notificación</div>
+    
+    <script>
+        // App Data Management
+        class AppData {
+            constructor() {
+                this.products = this.loadProducts();
+                this.settings = this.loadSettings();
+                this.shoppingList = this.loadShoppingList();
+                
+                // Verificar integridad de datos
+                this.ensureDataIntegrity();
+            }
+            
+            loadProducts() {
+                try {
+                    return JSON.parse(localStorage.getItem('products')) || [];
+                } catch (e) {
+                    console.error("Error al cargar productos:", e);
+                    return [];
+                }
+            }
+            
+            loadSettings() {
+                try {
+                    return JSON.parse(localStorage.getItem('settings')) || {
+                        theme: 'light',
+                        notifications: true,
+                        lowStockThreshold: 3
+                    };
+                } catch (e) {
+                    console.error("Error al cargar ajustes:", e);
+                    return {
+                        theme: 'light',
+                        notifications: true,
+                        lowStockThreshold: 3
+                    };
+                }
+            }
+            
+            loadShoppingList() {
+                try {
+                    return JSON.parse(localStorage.getItem('shoppingList')) || [];
+                } catch (e) {
+                    console.error("Error al cargar lista de compras:", e);
+                    return [];
+                }
+            }
+            
+            ensureDataIntegrity() {
+                // Asegurar que todos los productos tienen los campos necesarios
+                this.products = this.products.map(product => {
+                    if (typeof product.stock !== 'number') {
+                        product.stock = 0;
+                    }
+                    if (typeof product.minStock !== 'number') {
+                        product.minStock = 1;
+                    }
+                    if (!product.id) {
+                        product.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                    }
+                    if (!product.category) {
+                        product.category = 'otros';
+                    }
+                    if (!product.unit) {
+                        product.unit = 'unidad';
+                    }
+                    return product;
+                });
+                
+                this.saveProducts();
+            }
+            
+            saveProducts() {
+                try {
+                    localStorage.setItem('products', JSON.stringify(this.products));
+                    return true;
+                } catch (e) {
+                    console.error("Error al guardar productos:", e);
+                    return false;
+                }
+            }
+            
+            saveSettings() {
+                try {
+                    localStorage.setItem('settings', JSON.stringify(this.settings));
+                    return true;
+                } catch (e) {
+                    console.error("Error al guardar ajustes:", e);
+                    return false;
+                }
+            }
+            
+            saveShoppingList() {
+                try {
+                    localStorage.setItem('shoppingList', JSON.stringify(this.shoppingList));
+                    return true;
+                } catch (e) {
+                    console.error("Error al guardar lista de compras:", e);
+                    return false;
+                }
+            }
+            
+            addProduct(product) {
+                if (!product.id) {
+                    product.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                }
+                
+                // Convertir a números para asegurar el tipo de dato correcto
+                product.stock = Number(product.stock);
+                product.minStock = Number(product.minStock);
+                
+                this.products.push(product);
+                this.saveProducts();
+                return product;
+            }
+            
+            updateProduct(id, updatedData) {
+                const index = this.findProductIndex(id);
+                if (index !== -1) {
+                    // Convertir a números si son campos numéricos
+                    if (updatedData.stock !== undefined) {
+                        updatedData.stock = Number(updatedData.stock);
+                    }
+                    if (updatedData.minStock !== undefined) {
+                        updatedData.minStock = Number(updatedData.minStock);
+                    }
+                    
+                    this.products[index] = { ...this.products[index], ...updatedData };
+                    this.saveProducts();
+                    return this.products[index];
+                }
+                return null;
+            }
+            
+            deleteProduct(id) {
+                const initialLength = this.products.length;
+                this.products = this.products.filter(p => p.id !== id);
+                
+                // Si se borró correctamente y estaba en la lista de compras, eliminarla de allí también
+                if (initialLength > this.products.length) {
+                    this.shoppingList = this.shoppingList.filter(item => item.id !== id);
+                    this.saveShoppingList();
+                }
+                
+                this.saveProducts();
+                return initialLength > this.products.length;
+            }
+            
+            getProduct(id) {
+                return this.products.find(p => p.id === id) || null;
+            }
+            
+            findProductIndex(id) {
+                return this.products.findIndex(p => p.id === id);
+            }
+            
+            getAllProducts() {
+                return [...this.products];
+            }
+            
+            getProductsByCategory(category) {
+                if (!category || category === 'all') {
+                    return this.getAllProducts();
+                }
+                return this.products.filter(p => p.category === category);
+            }
+            
+            getProductsByStockStatus(status) {
+                if (!status || status === 'all') {
+                    return this.getAllProducts();
+                } else if (status === 'available') {
+                    return this.products.filter(p => p.stock > this.settings.lowStockThreshold);
+                } else if (status === 'low') {
+                    return this.products.filter(p => p.stock > 0 && p.stock <= this.settings.lowStockThreshold);
+                } else if (status === 'out') {
+                    return this.products.filter(p => p.stock === 0);
+                }
+                return this.getAllProducts();
+            }
+            
+            generateShoppingList() {
+                // Crear lista de compras a partir de productos agotados o con stock bajo
+                this.shoppingList = this.products
+                    .filter(p => p.stock < p.minStock)
+                    .map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        category: p.category,
+                        quantity: p.minStock - p.stock,
+                        unit: p.unit,
+                        purchased: false
+                    }));
+                
+                this.saveShoppingList();
+                return [...this.shoppingList];
+            }
+            
+            updateShoppingItem(id, purchased) {
+                const index = this.shoppingList.findIndex(item => item.id === id);
+                if (index !== -1) {
+                    this.shoppingList[index].purchased = purchased;
+                    this.saveShoppingList();
+                    return true;
+                }
+                return false;
+            }
+            
+            clearShoppingList() {
+                this.shoppingList = [];
+                this.saveShoppingList();
+            }
+            
+            getStockSummary() {
+                // Evitar errores con productos mal formados
+                const validProducts = this.products.filter(p => 
+                    p && typeof p === 'object' && p.hasOwnProperty('stock'));
+                
+                const total = validProducts.length;
+                const totalItems = validProducts.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
+                const lowStock = validProducts.filter(p => 
+                    p.stock > 0 && p.stock <= this.settings.lowStockThreshold).length;
+                const outOfStock = validProducts.filter(p => p.stock === 0).length;
+                
+                return {
+                    total,
+                    totalItems,
+                    lowStock,
+                    outOfStock
+                };
+            }
+            
+            exportData() {
+                const data = {
+                    products: this.products,
+                    settings: this.settings,
+                    shoppingList: this.shoppingList,
+                    exportDate: new Date().toISOString(),
+                    version: '1.0.0'
+                };
+                
+                return JSON.stringify(data, null, 2);
+            }
+            
+            importData(jsonData) {
+                try {
+                    const data = JSON.parse(jsonData);
+                    let importSuccess = false;
+                    
+                    if (Array.isArray(data.products)) {
+                        this.products = data.products.map(p => ({
+                            id: p.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                            name: p.name || 'Producto sin nombre',
+                            category: p.category || 'otros',
+                            unit: p.unit || 'unidad',
+                            minStock: Number(p.minStock) || 1,
+                            stock: Number(p.stock) || 0
+                        }));
+                        this.saveProducts();
+                        importSuccess = true;
+                    }
+                    
+                    if (data.settings && typeof data.settings === 'object') {
+                        this.settings = {
+                            ...this.settings,
+                            ...data.settings
+                        };
+                        this.saveSettings();
+                        importSuccess = true;
+                    }
+                    
+                    if (Array.isArray(data.shoppingList)) {
+                        this.shoppingList = data.shoppingList;
+                        this.saveShoppingList();
+                        importSuccess = true;
+                    }
+                    
+                    return importSuccess;
+                } catch (error) {
+                    console.error('Error importing data:', error);
+                    return false;
+                }
+            }
+            
+            clearAllData() {
+                try {
+                    localStorage.removeItem('products');
+                    localStorage.removeItem('settings');
+                    localStorage.removeItem('shoppingList');
+                    
+                    this.products = [];
+                    this.shoppingList = [];
+                    this.settings = {
+                        theme: 'light',
+                        notifications: true,
+                        lowStockThreshold: 3
+                    };
+                    
+                    return true;
+                } catch (e) {
+                    console.error("Error al limpiar datos:", e);
+                    return false;
+                }
+            }
+        }
+        
+        // App UI Management
+        class AppUI {
+            constructor(appData) {
+                this.appData = appData;
+                this.currentPage = 'basePage';
+                this.currentProductId = null;
+                this.activeCategoryFilter = 'all';
+                this.activeStockFilter = 'all';
+                this.searchTerm = '';
+                
+                this.initEventListeners();
+                this.renderAll();
+            }
+            
+            initEventListeners() {
+                // Navigation events
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        this.navigateTo(item.dataset.page);
+                    });
+                });
+                
+                // Header actions
+                document.getElementById('searchToggle').addEventListener('click', () => {
+                    const searchBar = document.getElementById('searchBar');
+                    searchBar.classList.toggle('hidden');
+                    if (!searchBar.classList.contains('hidden')) {
+                        searchBar.querySelector('input').focus();
+                    }
+                });
+                
+                // Search input
+                const searchInput = document.querySelector('#searchBar input');
+                searchInput.addEventListener('input', (e) => {
+                    this.searchTerm = e.target.value.trim().toLowerCase();
+                    this.filterProductsBySearch();
+                });
+                
+                // Category filter clicks
+                document.querySelectorAll('#categoryFilters .category-pill').forEach(pill => {
+                    pill.addEventListener('click', () => {
+                        document.querySelectorAll('#categoryFilters .category-pill').forEach(p => p.classList.remove('active'));
+                        pill.classList.add('active');
+                        this.activeCategoryFilter = pill.dataset.category;
+                        this.renderBaseProducts();
+                    });
+                });
+                
+                // Stock filter clicks
+                document.querySelectorAll('#stockFilters .category-pill').forEach(pill => {
+                    pill.addEventListener('click', () => {
+                        document.querySelectorAll('#stockFilters .category-pill').forEach(p => p.classList.remove('active'));
+                        pill.classList.add('active');
+                        this.activeStockFilter = pill.dataset.filter;
+                        this.renderStockProducts();
+                    });
+                });
+                
+                // Add button click
+                document.getElementById('addButton').addEventListener('click', () => {
+                    this.showProductModal();
+                });
+                
+                // Empty state buttons
+                document.getElementById('emptyAddBtn').addEventListener('click', () => {
+                    this.showProductModal();
+                });
+                
+                document.getElementById('goToBaseBtn').addEventListener('click', () => {
+                    this.navigateTo('basePage');
+                });
+                
+                // Product form actions
+                document.getElementById('productForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveProductForm();
+                });
+                
+                document.getElementById('cancelProductBtn').addEventListener('click', () => {
+                    this.hideProductModal();
+                });
+                
+                // Stock modal actions
+                document.getElementById('decreaseStock').addEventListener('click', () => {
+                    const input = document.getElementById('stockQuantity');
+                    const value = parseInt(input.value) || 0;
+                    if (value > 0) {
+                        input.value = value - 1;
+                    }
+                });
+                
+                document.getElementById('increaseStock').addEventListener('click', () => {
+                    const input = document.getElementById('stockQuantity');
+                    const value = parseInt(input.value) || 0;
+                    input.value = value + 1;
+                });
+                
+                document.getElementById('cancelStockBtn').addEventListener('click', () => {
+                    this.hideStockModal();
+                });
+                
+                document.getElementById('saveStockBtn').addEventListener('click', () => {
+                    this.saveStockUpdate();
+                });
+                
+                // Shopping list actions
+                document.getElementById('generateListBtn').addEventListener('click', () => {
+                    this.generateShoppingList();
+                });
+                
+                document.getElementById('generateEmptyListBtn').addEventListener('click', () => {
+                    this.generateShoppingList();
+                });
+                
+                document.getElementById('clearListBtn').addEventListener('click', () => {
+                    this.showConfirmModal(
+                        'Limpiar lista de compra',
+                        '¿Estás seguro de que deseas limpiar la lista de compra?',
+                        () => {
+                            this.appData.clearShoppingList();
+                            this.renderShoppingList();
+                            this.showToast('Lista de compra limpiada', 'success');
+                        }
+                    );
+                });
+                
+                // Settings actions
+                document.getElementById('lowStockThreshold').addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    document.getElementById('thresholdValue').textContent = value;
+                    this.appData.settings.lowStockThreshold = value;
+                    this.appData.saveSettings();
+                    this.updateStockSummary();
+                    this.renderStockProducts();
+                });
+                
+                document.getElementById('exportDataBtn').addEventListener('click', () => {
+                    this.exportData();
+                });
+                
+                document.getElementById('importDataBtn').addEventListener('click', () => {
+                    // Create a hidden file input
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.style.display = 'none';
+                    
+                    input.addEventListener('change', (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                const success = this.appData.importData(event.target.result);
+                                if (success) {
+                                    this.renderAll();
+                                    this.showToast('Datos importados correctamente', 'success');
+                                } else {
+                                    this.showToast('Error al importar datos', 'error');
+                                }
+                            };
+                            reader.readAsText(file);
+                        }
+                    });
+                    
+                    document.body.appendChild(input);
+                    input.click();
+                    document.body.removeChild(input);
+                });
+                
+                document.getElementById('clearDataBtn').addEventListener('click', () => {
+                    this.showConfirmModal(
+                        'Borrar todos los datos',
+                        '¿Estás seguro de que deseas borrar todos los datos? Esta acción no se puede deshacer.',
+                        () => {
+                            this.appData.clearAllData();
+                            this.renderAll();
+                            this.showToast('Todos los datos han sido borrados', 'success');
+                        }
+                    );
+                });
+                
+                // Confirm modal actions
+                document.getElementById('cancelConfirmBtn').addEventListener('click', () => {
+                    this.hideConfirmModal();
+                });
+                
+                // Prevenir errores de scroll en dispositivos móviles
+                document.addEventListener('touchmove', function(e) {
+                    if (e.target.closest('.app-content') || e.target.closest('.modal')) {
+                        e.stopPropagation();
+                    }
+                }, { passive: true });
+            }
+            
+            navigateTo(page) {
+                // Hide all pages
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                
+                // Show selected page
+                document.getElementById(page).classList.add('active');
+                
+                // Update nav
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    if (item.dataset.page === page) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+                
+                this.currentPage = page;
+                
+                // Update FAB visibility
+                const addButton = document.getElementById('addButton');
+                if (page === 'basePage' || page === 'stockPage') {
+                    addButton.style.display = 'flex';
+                } else {
+                    addButton.style.display = 'none';
+                }
+                
+                // Actualizar datos específicos según la página
+                if (page === 'stockPage') {
+                    this.updateStockSummary();
+                    this.renderStockProducts();
+                } else if (page === 'shoppingPage') {
+                    this.renderShoppingList();
+                }
+            }
+            
+            renderBaseProducts() {
+                const container = document.getElementById('baseProductsList');
+                const emptyState = document.getElementById('emptyBaseProducts');
+                const products = this.appData.getProductsByCategory(this.activeCategoryFilter);
+                
+                container.innerHTML = '';
+                
+                if (products.length === 0) {
+                    container.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    return;
+                } else {
+                    container.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+                }
+                
+                // Filtrar por término de búsqueda si existe
+                const filteredProducts = this.searchTerm 
+                    ? products.filter(p => p.name.toLowerCase().includes(this.searchTerm))
+                    : products;
+                
+                if (filteredProducts.length === 0) {
+                    const noResults = document.createElement('div');
+                    noResults.className = 'text-center text-gray-500 py-8';
+                    noResults.textContent = 'No se encontraron productos que coincidan con tu búsqueda';
+                    container.appendChild(noResults);
+                    return;
+                }
+                
+                filteredProducts.forEach(product => {
+                    const card = document.createElement('div');
+                    card.className = 'product-item animate-fadeIn';
+                    card.dataset.id = product.id;
+                    card.innerHTML = `
+                        <div class="flex items-center">
+                            <div class="mr-3">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100">
+                                    <i class="fas ${this.getCategoryIcon(product.category)} text-gray-600"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="font-medium">${product.name}</div>
+                                <div class="text-xs text-gray-500">
+                                    ${this.capitalizeFirst(product.category)} • ${product.minStock} ${product.unit} mín.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="badge ${this.getStockBadgeClass(product.stock, product.minStock)} mr-2">
+                                ${product.stock} ${product.unit}
+                            </div>
+                            <div class="flex gap-1">
+                                <button class="p-2 text-gray-500 edit-product-btn" data-id="${product.id}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="p-2 text-gray-500 delete-product-btn" data-id="${product.id}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(card);
+                    
+                    // Add event listeners
+                    card.querySelector('.edit-product-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.editProduct(product.id);
+                    });
+                    
+                    card.querySelector('.delete-product-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.deleteProduct(product.id);
+                    });
+                    
+                    // Make the whole card clickable to update stock
+                    card.addEventListener('click', (e) => {
+                        // Only trigger if not clicking on the buttons
+                        if (!e.target.closest('button')) {
+                            this.showStockModal(product.id);
+                        }
+                    });
+                });
+            }
+            
+            renderStockProducts() {
+                const container = document.getElementById('stockProductsList');
+                const emptyState = document.getElementById('emptyStock');
+                const products = this.appData.getProductsByStockStatus(this.activeStockFilter);
+                
+                container.innerHTML = '';
+                
+                if (products.length === 0) {
+                    container.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    return;
+                } else {
+                    container.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+                }
+                
+                // Filtrar por término de búsqueda si existe
+                const filteredProducts = this.searchTerm 
+                    ? products.filter(p => p.name.toLowerCase().includes(this.searchTerm))
+                    : products;
+                
+                if (filteredProducts.length === 0) {
+                    const noResults = document.createElement('div');
+                    noResults.className = 'text-center text-gray-500 py-8';
+                    noResults.textContent = 'No se encontraron productos que coincidan con tu búsqueda';
+                    container.appendChild(noResults);
+                    return;
+                }
+                
+                filteredProducts.forEach(product => {
+                    const stockPercentage = Math.min(100, Math.max(0, (product.stock / Math.max(1, product.minStock)) * 100));
+                    
+                    const card = document.createElement('div');
+                    card.className = 'card animate-fadeIn cursor-pointer';
+                    card.dataset.id = product.id;
+                    card.innerHTML = `
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="font-medium">${product.name}</div>
+                            <div class="badge ${this.getStockBadgeClass(product.stock, product.minStock)}">
+                                ${product.stock} ${product.unit}
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-500 mb-2">
+                            ${this.capitalizeFirst(product.category)} • Mínimo recomendado: ${product.minStock} ${product.unit}
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-value" style="width: ${stockPercentage}%"></div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(card);
+                    
+                    // Add event listener
+                    card.addEventListener('click', () => {
+                        this.showStockModal(product.id);
+                    });
+                });
+            }
+            
+            renderShoppingList() {
+                const container = document.getElementById('shoppingList');
+                const emptyState = document.getElementById('emptyShoppingList');
+                
+                container.innerHTML = '';
+                
+                if (this.appData.shoppingList.length === 0) {
+                    container.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    return;
+                } else {
+                    container.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+                }
+                
+                // Group shopping list by category
+                const groupedList = {};
+                this.appData.shoppingList.forEach(item => {
+                    if (!groupedList[item.category]) {
+                        groupedList[item.category] = [];
+                    }
+                    groupedList[item.category].push(item);
+                });
+                
+                // Render groups
+                Object.keys(groupedList).forEach(category => {
+                    const categorySection = document.createElement('div');
+                    categorySection.className = 'mb-4';
+                    categorySection.innerHTML = `
+                        <div class="flex items-center mb-2">
+                            <i class="fas ${this.getCategoryIcon(category)} mr-2 text-gray-600"></i>
+                            <h3 class="font-medium text-gray-700">${this.capitalizeFirst(category)}</h3>
+                        </div>
+                    `;
+                    
+                    const itemsList = document.createElement('div');
+                    itemsList.className = 'bg-white rounded-lg overflow-hidden';
+                    
+                    groupedList[category].forEach((item, index) => {
+                        const itemElement = document.createElement('div');
+                        itemElement.className = `flex items-center justify-between p-3 ${index !== 0 ? 'border-t border-gray-100' : ''}`;
+                        itemElement.innerHTML = `
+                            <div class="flex items-center">
+                                <div class="custom-checkbox mr-3 ${item.purchased ? 'checked' : ''}" data-id="${item.id}"></div>
+                                <div class="${item.purchased ? 'line-through text-gray-400' : ''}">
+                                    <div class="font-medium">${item.name}</div>
+                                    <div class="text-xs text-gray-500">${item.quantity} ${item.unit}</div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        itemsList.appendChild(itemElement);
+                        
+                        // Add event listener to checkbox
+                        const checkbox = itemElement.querySelector('.custom-checkbox');
+                        checkbox.addEventListener('click', () => {
+                            const purchased = !item.purchased;
+                            this.appData.updateShoppingItem(item.id, purchased);
+                            checkbox.classList.toggle('checked', purchased);
+                            checkbox.parentElement.querySelector('div:last-child').classList.toggle('line-through', purchased);
+                            checkbox.parentElement.querySelector('div:last-child').classList.toggle('text-gray-400', purchased);
+                        });
+                    });
+                    
+                    categorySection.appendChild(itemsList);
+                    container.appendChild(categorySection);
+                });
+            }
+            
+            updateStockSummary() {
+                const summary = this.appData.getStockSummary();
+                
+                document.getElementById('totalProductsStock').textContent = summary.total;
+                document.getElementById('totalItemsAvailable').textContent = summary.totalItems;
+                document.getElementById('lowStockCount').textContent = summary.lowStock;
+                document.getElementById('outOfStockCount').textContent = summary.outOfStock;
+            }
+            
+            showProductModal(isEdit = false) {
+                const modal = document.getElementById('productModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const form = document.getElementById('productForm');
+                
+                modalTitle.textContent = isEdit ? 'Editar producto' : 'Agregar producto';
+                
+                if (!isEdit) {
+                    form.reset();
+                    this.currentProductId = null;
+                }
+                
+                document.getElementById('stockQuantityGroup').style.display = isEdit ? 'none' : 'block';
+                
+                modal.classList.add('active');
+            }
+            
+            hideProductModal() {
+                const modal = document.getElementById('productModal');
+                modal.classList.remove('active');
+            }
+            
+            editProduct(id) {
+                const product = this.appData.getProduct(id);
+                if (!product) return;
+                
+                this.currentProductId = id;
+                
+                document.getElementById('productName').value = product.name;
+                document.getElementById('productCategory').value = product.category;
+                document.getElementById('productUnit').value = product.unit;
+                document.getElementById('productMinStock').value = product.minStock;
+                document.getElementById('productStock').value = product.stock;
+                
+                this.showProductModal(true);
+            }
+            
+            deleteProduct(id) {
+                const product = this.appData.getProduct(id);
+                if (!product) return;
+                
+                this.showConfirmModal(
+                    'Eliminar producto',
+                    `¿Estás seguro de que deseas eliminar "${product.name}"?`,
+                    () => {
+                        this.appData.deleteProduct(id);
+                        this.renderAll();
+                        this.showToast('Producto eliminado', 'success');
+                    }
+                );
+            }
+            
+            saveProductForm() {
+                const form = document.getElementById('productForm');
+                const name = document.getElementById('productName').value.trim();
+                const category = document.getElementById('productCategory').value;
+                const unit = document.getElementById('productUnit').value;
+                const minStock = parseInt(document.getElementById('productMinStock').value);
+                const stock = parseInt(document.getElementById('productStock').value);
+                
+                if (name && category && unit && !isNaN(minStock) && (!isNaN(stock) || this.currentProductId)) {
+                    const productData = {
+                        name,
+                        category,
+                        unit,
+                        minStock
+                    };
+                    
+                    if (!this.currentProductId) {
+                        // Adding new product
+                        productData.stock = stock;
+                        this.appData.addProduct(productData);
+                        this.showToast('Producto agregado', 'success');
+                    } else {
+                        // Updating existing product
+                        this.appData.updateProduct(this.currentProductId, productData);
+                        this.showToast('Producto actualizado', 'success');
+                    }
+                    
+                    this.hideProductModal();
+                    this.renderAll();
+                }
+            }
+            
+            showStockModal(id) {
+                const product = this.appData.getProduct(id);
+                if (!product) return;
+                
+                this.currentProductId = id;
+                
+                document.getElementById('stockProductName').textContent = product.name;
+                document.getElementById('stockProductCategory').textContent = `${this.capitalizeFirst(product.category)} • ${product.minStock} ${product.unit} mín.`;
+                document.getElementById('stockQuantity').value = product.stock;
+                
+                document.getElementById('stockModal').classList.add('active');
+            }
+            
+            hideStockModal() {
+                document.getElementById('stockModal').classList.remove('active');
+            }
+            
+            saveStockUpdate() {
+                const quantity = parseInt(document.getElementById('stockQuantity').value);
+                
+                if (!isNaN(quantity) && this.currentProductId) {
+                    this.appData.updateProduct(this.currentProductId, { stock: quantity });
+                    this.hideStockModal();
+                    this.renderAll();
+                    this.showToast('Stock actualizado', 'success');
+                }
+            }
+            
+            generateShoppingList() {
+                this.appData.generateShoppingList();
+                this.renderShoppingList();
+                this.showToast('Lista de compra generada', 'success');
+            }
+            
+            showConfirmModal(title, message, confirmCallback) {
+                const modal = document.getElementById('confirmModal');
+                
+                document.getElementById('confirmTitle').textContent = title;
+                document.getElementById('confirmMessage').textContent = message;
+                
+                const confirmBtn = document.getElementById('confirmActionBtn');
+                
+                // Remove existing listener and add new one
+                const newConfirmBtn = confirmBtn.cloneNode(true);
+                confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+                
+                newConfirmBtn.addEventListener('click', () => {
+                    confirmCallback();
+                    this.hideConfirmModal();
+                });
+                
+                modal.classList.add('active');
+            }
+            
+            hideConfirmModal() {
+                document.getElementById('confirmModal').classList.remove('active');
+            }
+            
+            showToast(message, type = 'info') {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.className = `toast ${type}`;
+                
+                // Show the toast
+                setTimeout(() => {
+                    toast.classList.add('show');
+                    
+                    // Hide after 3 seconds
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, 3000);
+                }, 100);
+            }
+            
+            filterProductsBySearch() {
+                // Renderizar productos nuevamente con el término de búsqueda
+                if (this.currentPage === 'basePage') {
+                    this.renderBaseProducts();
+                } else if (this.currentPage === 'stockPage') {
+                    this.renderStockProducts();
+                }
+            }
+            
+            initSettings() {
+                // Set settings values
+                document.getElementById('lowStockThreshold').value = this.appData.settings.lowStockThreshold;
+                document.getElementById('thresholdValue').textContent = this.appData.settings.lowStockThreshold;
+                
+                // Set theme toggle
+                const customCheckboxes = document.querySelectorAll('.custom-checkbox');
+                customCheckboxes.forEach(checkbox => {
+                    if (!checkbox.closest('#shoppingList')) {
+                        checkbox.addEventListener('click', function() {
+                            this.classList.toggle('checked');
+                        });
+                    }
+                });
+            }
+            
+            renderAll() {
+                this.renderBaseProducts();
+                this.renderStockProducts();
+                this.renderShoppingList();
+                this.updateStockSummary();
+                this.initSettings();
+            }
+            
+            // Helper methods
+            getStockBadgeClass(stock, minStock) {
+                if (stock === 0) {
+                    return 'badge-danger';
+                } else if (stock <= this.appData.settings.lowStockThreshold) {
+                    return 'badge-warning';
+                } else if (stock >= minStock) {
+                    return 'badge-secondary';
+                } else {
+                    return 'badge-primary';
+                }
+            }
+            
+            getCategoryIcon(category) {
+                const icons = {
+                    frutas: 'fa-apple-alt',
+                    verduras: 'fa-carrot',
+                    lacteos: 'fa-cheese',
+                    carnes: 'fa-drumstick-bite',
+                    pescados: 'fa-fish',
+                    congelados: 'fa-snowflake',
+                    bebidas: 'fa-wine-bottle',
+                    otros: 'fa-shopping-basket'
+                };
+                
+                return icons[category] || 'fa-box';
+            }
+            
+            capitalizeFirst(string) {
+                if (!string) return '';
+                return string.charAt(0).toUpperCase() + string.slice(1);
+            }
+            
+            exportData() {
+                const data = this.appData.exportData();
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `la-compra-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.showToast('Datos exportados correctamente', 'success');
+            }
+        }
+        
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const appData = new AppData();
+            const app = new AppUI(appData);
+            
+            // Add some demo products if there are none
+            if (appData.products.length === 0) {
+                const demoProducts = [
+                    { name: 'Manzanas', category: 'frutas', unit: 'kg', minStock: 2, stock: 1 },
+                    { name: 'Leche', category: 'lacteos', unit: 'l', minStock: 2, stock: 1 },
+                    { name: 'Pan', category: 'otros', unit: 'unidad', minStock: 2, stock: 0 },
+                    { name: 'Pollo', category: 'carnes', unit: 'kg', minStock: 1, stock: 0.5 },
+                    { name: 'Tomates', category: 'verduras', unit: 'kg', minStock: 1, stock: 2 },
+                    { name: 'Queso', category: 'lacteos', unit: 'g', minStock: 300, stock: 150 }
+                ];
+                
+                demoProducts.forEach(product => {
+                    appData.addProduct(product);
+                });
+                
+                app.renderAll();
+            }
+            
+            // Verificar y sincronizar datos entre páginas cada 5 segundos
+            setInterval(() => {
+                app.renderAll();
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
