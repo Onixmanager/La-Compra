@@ -3,8 +3,8 @@
   "short_name": "La Compra",
   "start_url": "https://onixmanager.github.io/La-Compra/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+"background_color": "#000000",
+"theme_color": "#000000"
   "icons": [
     {
       "src": "https://raw.githubusercontent.com/Onixmanager/La-Compra/refs/heads/main/192logo.jpg",
