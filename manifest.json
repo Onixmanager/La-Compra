@@ -9,12 +9,12 @@
     {
       "src": "https://raw.githubusercontent.com/Onixmanager/La-Compra/refs/heads/main/1000103584.png",
       "sizes": "192x192",
-      "type": "image/jpg"
+      "type": "image/png"
     },
     {
       "src": "https://raw.githubusercontent.com/Onixmanager/La-Compra/refs/heads/main/1000103585.png",
       "sizes": "512x512",
-      "type": "image/jpg"
+      "type": "image/png"
     }
   ]
 }
