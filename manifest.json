@@ -7,12 +7,12 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "https://raw.githubusercontent.com/Onixmanager/La-Compra/refs/heads/main/192logo.webp",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icon-512.png",
+      "src": "https://raw.githubusercontent.com/Onixmanager/La-Compra/refs/heads/main/512Logo.webp",
       "sizes": "512x512",
       "type": "image/png"
     }
