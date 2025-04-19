@@ -807,6 +807,11 @@
                 this.products = this.loadProducts();
                 this.settings = this.loadSettings();
                 this.shoppingList = this.loadShoppingList();
+                this._prevState = JSON.stringify({
+                    products: this.products,
+                    settings: this.settings,
+                    shoppingList: this.shoppingList
+                });
                 
                 // Verificar integridad de datos
                 this.ensureDataIntegrity();
@@ -1102,6 +1107,19 @@
                     return false;
                 }
             }
+            
+            // Detectar cambios en los datos
+            hasChanged() {
+                const currentState = JSON.stringify({
+                    products: this.products,
+                    settings: this.settings,
+                    shoppingList: this.shoppingList
+                });
+                
+                const hasChanged = this._prevState !== currentState;
+                this._prevState = currentState;
+                return hasChanged;
+            }
         }
         
         // App UI Management
@@ -1113,9 +1131,10 @@
                 this.activeCategoryFilter = 'all';
                 this.activeStockFilter = 'all';
                 this.searchTerm = '';
+                this.itemElements = {}; // Mapa para almacenar referencias a elementos DOM
                 
                 this.initEventListeners();
-                this.renderAll();
+                this.renderAll(true); // Renderizado inicial
             }
             
             initEventListeners() {
@@ -1258,7 +1277,7 @@
                             reader.onload = (event) => {
                                 const success = this.appData.importData(event.target.result);
                                 if (success) {
-                                    this.renderAll();
+                                    this.renderAll(true); // Forzar renderizado completo después de importar
                                     this.showToast('Datos importados correctamente', 'success');
                                 } else {
                                     this.showToast('Error al importar datos', 'error');
@@ -1279,7 +1298,7 @@
                         '¿Estás seguro de que deseas borrar todos los datos? Esta acción no se puede deshacer.',
                         () => {
                             this.appData.clearAllData();
-                            this.renderAll();
+                            this.renderAll(true); // Forzar renderizado completo después de borrar datos
                             this.showToast('Todos los datos han sido borrados', 'success');
                         }
                     );
@@ -1333,40 +1352,17 @@
                 }
             }
             
-            renderBaseProducts() {
-                const container = document.getElementById('baseProductsList');
-                const emptyState = document.getElementById('emptyBaseProducts');
-                const products = this.appData.getProductsByCategory(this.activeCategoryFilter);
+            // Método para crear o actualizar un elemento de producto
+            createOrUpdateProductElement(product, container, type) {
+                const productId = product.id;
+                const elementId = `${type}-${productId}`;
+                let element = document.getElementById(elementId);
+                const stockPercentage = Math.min(100, Math.max(0, (product.stock / Math.max(1, product.minStock)) * 100));
                 
-                container.innerHTML = '';
-                
-                if (products.length === 0) {
-                    container.classList.add('hidden');
-                    emptyState.classList.remove('hidden');
-                    return;
-                } else {
-                    container.classList.remove('hidden');
-                    emptyState.classList.add('hidden');
-                }
-                
-                // Filtrar por término de búsqueda si existe
-                const filteredProducts = this.searchTerm 
-                    ? products.filter(p => p.name.toLowerCase().includes(this.searchTerm))
-                    : products;
-                
-                if (filteredProducts.length === 0) {
-                    const noResults = document.createElement('div');
-                    noResults.className = 'text-center text-gray-500 py-8';
-                    noResults.textContent = 'No se encontraron productos que coincidan con tu búsqueda';
-                    container.appendChild(noResults);
-                    return;
-                }
-                
-                filteredProducts.forEach(product => {
-                    const card = document.createElement('div');
-                    card.className = 'product-item animate-fadeIn';
-                    card.dataset.id = product.id;
-                    card.innerHTML = `
+                // Crear HTML según el tipo de elemento
+                let innerHTML = '';
+                if (type === 'base') {
+                    innerHTML = `
                         <div class="flex items-center">
                             <div class="mr-3">
                                 <div class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100">
@@ -1394,66 +1390,8 @@
                             </div>
                         </div>
                     `;
-                    
-                    container.appendChild(card);
-                    
-                    // Add event listeners
-                    card.querySelector('.edit-product-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.editProduct(product.id);
-                    });
-                    
-                    card.querySelector('.delete-product-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.deleteProduct(product.id);
-                    });
-                    
-                    // Make the whole card clickable to update stock
-                    card.addEventListener('click', (e) => {
-                        // Only trigger if not clicking on the buttons
-                        if (!e.target.closest('button')) {
-                            this.showStockModal(product.id);
-                        }
-                    });
-                });
-            }
-            
-            renderStockProducts() {
-                const container = document.getElementById('stockProductsList');
-                const emptyState = document.getElementById('emptyStock');
-                const products = this.appData.getProductsByStockStatus(this.activeStockFilter);
-                
-                container.innerHTML = '';
-                
-                if (products.length === 0) {
-                    container.classList.add('hidden');
-                    emptyState.classList.remove('hidden');
-                    return;
-                } else {
-                    container.classList.remove('hidden');
-                    emptyState.classList.add('hidden');
-                }
-                
-                // Filtrar por término de búsqueda si existe
-                const filteredProducts = this.searchTerm 
-                    ? products.filter(p => p.name.toLowerCase().includes(this.searchTerm))
-                    : products;
-                
-                if (filteredProducts.length === 0) {
-                    const noResults = document.createElement('div');
-                    noResults.className = 'text-center text-gray-500 py-8';
-                    noResults.textContent = 'No se encontraron productos que coincidan con tu búsqueda';
-                    container.appendChild(noResults);
-                    return;
-                }
-                
-                filteredProducts.forEach(product => {
-                    const stockPercentage = Math.min(100, Math.max(0, (product.stock / Math.max(1, product.minStock)) * 100));
-                    
-                    const card = document.createElement('div');
-                    card.className = 'card animate-fadeIn cursor-pointer';
-                    card.dataset.id = product.id;
-                    card.innerHTML = `
+                } else if (type === 'stock') {
+                    innerHTML = `
                         <div class="flex justify-between items-center mb-2">
                             <div class="font-medium">${product.name}</div>
                             <div class="badge ${this.getStockBadgeClass(product.stock, product.minStock)}">
@@ -1467,23 +1405,222 @@
                             <div class="progress-value" style="width: ${stockPercentage}%"></div>
                         </div>
                     `;
+                }
+                
+                // Si el elemento existe, actualizar su contenido
+                if (element) {
+                    // Solo actualizar si realmente ha cambiado
+                    const currentHtml = element.innerHTML;
+                    if (currentHtml !== innerHTML) {
+                        element.innerHTML = innerHTML;
+                    }
+                } else {
+                    // Crear nuevo elemento
+                    element = document.createElement('div');
+                    element.id = elementId;
+                    element.dataset.id = productId;
                     
-                    container.appendChild(card);
+                    if (type === 'base') {
+                        element.className = 'product-item';
+                        element.innerHTML = innerHTML;
+                        
+                        // Agregar event listeners
+                        element.addEventListener('click', (e) => {
+                            if (!e.target.closest('button')) {
+                                this.showStockModal(productId);
+                            }
+                        });
+                    } else if (type === 'stock') {
+                        element.className = 'card cursor-pointer';
+                        element.innerHTML = innerHTML;
+                        
+                        element.addEventListener('click', () => {
+                            this.showStockModal(productId);
+                        });
+                    }
                     
-                    // Add event listener
-                    card.addEventListener('click', () => {
-                        this.showStockModal(product.id);
+                    container.appendChild(element);
+                }
+                
+                // Agregar o actualizar event listeners para botones específicos
+                if (type === 'base') {
+                    const editBtn = element.querySelector('.edit-product-btn');
+                    const deleteBtn = element.querySelector('.delete-product-btn');
+                    
+                    // Limpiar listeners antiguos
+                    const newEditBtn = editBtn.cloneNode(true);
+                    const newDeleteBtn = deleteBtn.cloneNode(true);
+                    
+                    editBtn.parentNode.replaceChild(newEditBtn, editBtn);
+                    deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+                    
+                    // Agregar nuevos listeners
+                    newEditBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.editProduct(productId);
                     });
-                });
+                    
+                    newDeleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.deleteProduct(productId);
+                    });
+                }
+                
+                return element;
             }
             
-            renderShoppingList() {
+            renderBaseProducts(forceRender = false) {
+                const container = document.getElementById('baseProductsList');
+                const emptyState = document.getElementById('emptyBaseProducts');
+                const products = this.appData.getProductsByCategory(this.activeCategoryFilter);
+                
+                // Filtrar por término de búsqueda si existe
+                const filteredProducts = this.searchTerm 
+                    ? products.filter(p => p.name.toLowerCase().includes(this.searchTerm))
+                    : products;
+                
+                if (filteredProducts.length === 0) {
+                    container.innerHTML = '';
+                    
+                    if (this.searchTerm) {
+                        const noResults = document.createElement('div');
+                        noResults.className = 'text-center text-gray-500 py-8';
+                        noResults.textContent = 'No se encontraron productos que coincidan con tu búsqueda';
+                        container.appendChild(noResults);
+                        emptyState.classList.add('hidden');
+                        container.classList.remove('hidden');
+                    } else {
+                        container.classList.add('hidden');
+                        emptyState.classList.remove('hidden');
+                    }
+                    return;
+                } else {
+                    container.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+                }
+                
+                // Crear un Set con IDs que debemos mostrar
+                const visibleIds = new Set(filteredProducts.map(p => p.id));
+                
+                // Almacenar IDs actuales en el DOM
+                const currentIds = new Set();
+                container.querySelectorAll('.product-item').forEach(item => {
+                    currentIds.add(item.dataset.id);
+                });
+                
+                // Si forzamos el renderizado o hay cambios en los elementos a mostrar, actualizar todo
+                if (forceRender || !this.arraysEqual(Array.from(visibleIds), Array.from(currentIds))) {
+                    // Limpiar contenedor solo si es necesario
+                    if (forceRender) {
+                        container.innerHTML = '';
+                    } else {
+                        // Remover elementos que ya no deben mostrarse
+                        currentIds.forEach(id => {
+                            if (!visibleIds.has(id)) {
+                                const element = document.getElementById(`base-${id}`);
+                                if (element) element.remove();
+                            }
+                        });
+                    }
+                    
+                    // Fragmento para mejorar rendimiento
+                    const fragment = document.createDocumentFragment();
+                    
+                    // Crear o actualizar elementos
+                    filteredProducts.forEach(product => {
+                        const element = this.createOrUpdateProductElement(product, forceRender ? fragment : container, 'base');
+                        if (forceRender) fragment.appendChild(element);
+                    });
+                    
+                    // Agregar todos los elementos de una vez si es renderizado completo
+                    if (forceRender) container.appendChild(fragment);
+                } else {
+                    // Solo actualizar contenido de elementos existentes
+                    filteredProducts.forEach(product => {
+                        this.createOrUpdateProductElement(product, container, 'base');
+                    });
+                }
+            }
+            
+            renderStockProducts(forceRender = false) {
+                const container = document.getElementById('stockProductsList');
+                const emptyState = document.getElementById('emptyStock');
+                const products = this.appData.getProductsByStockStatus(this.activeStockFilter);
+                
+                // Filtrar por término de búsqueda si existe
+                const filteredProducts = this.searchTerm 
+                    ? products.filter(p => p.name.toLowerCase().includes(this.searchTerm))
+                    : products;
+                
+                if (filteredProducts.length === 0) {
+                    container.innerHTML = '';
+                    
+                    if (this.searchTerm) {
+                        const noResults = document.createElement('div');
+                        noResults.className = 'text-center text-gray-500 py-8';
+                        noResults.textContent = 'No se encontraron productos que coincidan con tu búsqueda';
+                        container.appendChild(noResults);
+                        emptyState.classList.add('hidden');
+                        container.classList.remove('hidden');
+                    } else {
+                        container.classList.add('hidden');
+                        emptyState.classList.remove('hidden');
+                    }
+                    return;
+                } else {
+                    container.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+                }
+                
+                // Crear un Set con IDs que debemos mostrar
+                const visibleIds = new Set(filteredProducts.map(p => p.id));
+                
+                // Almacenar IDs actuales en el DOM
+                const currentIds = new Set();
+                container.querySelectorAll('.card').forEach(item => {
+                    currentIds.add(item.dataset.id);
+                });
+                
+                // Si forzamos el renderizado o hay cambios en los elementos a mostrar, actualizar todo
+                if (forceRender || !this.arraysEqual(Array.from(visibleIds), Array.from(currentIds))) {
+                    // Limpiar contenedor solo si es necesario
+                    if (forceRender) {
+                        container.innerHTML = '';
+                    } else {
+                        // Remover elementos que ya no deben mostrarse
+                        currentIds.forEach(id => {
+                            if (!visibleIds.has(id)) {
+                                const element = document.getElementById(`stock-${id}`);
+                                if (element) element.remove();
+                            }
+                        });
+                    }
+                    
+                    // Fragmento para mejorar rendimiento
+                    const fragment = document.createDocumentFragment();
+                    
+                    // Crear o actualizar elementos
+                    filteredProducts.forEach(product => {
+                        const element = this.createOrUpdateProductElement(product, forceRender ? fragment : container, 'stock');
+                        if (forceRender) fragment.appendChild(element);
+                    });
+                    
+                    // Agregar todos los elementos de una vez si es renderizado completo
+                    if (forceRender) container.appendChild(fragment);
+                } else {
+                    // Solo actualizar contenido de elementos existentes
+                    filteredProducts.forEach(product => {
+                        this.createOrUpdateProductElement(product, container, 'stock');
+                    });
+                }
+            }
+            
+            renderShoppingList(forceRender = false) {
                 const container = document.getElementById('shoppingList');
                 const emptyState = document.getElementById('emptyShoppingList');
                 
-                container.innerHTML = '';
-                
                 if (this.appData.shoppingList.length === 0) {
+                    container.innerHTML = '';
                     container.classList.add('hidden');
                     emptyState.classList.remove('hidden');
                     return;
@@ -1492,67 +1629,106 @@
                     emptyState.classList.add('hidden');
                 }
                 
-                // Group shopping list by category
-                const groupedList = {};
-                this.appData.shoppingList.forEach(item => {
-                    if (!groupedList[item.category]) {
-                        groupedList[item.category] = [];
-                    }
-                    groupedList[item.category].push(item);
-                });
-                
-                // Render groups
-                Object.keys(groupedList).forEach(category => {
-                    const categorySection = document.createElement('div');
-                    categorySection.className = 'mb-4';
-                    categorySection.innerHTML = `
-                        <div class="flex items-center mb-2">
-                            <i class="fas ${this.getCategoryIcon(category)} mr-2 text-gray-600"></i>
-                            <h3 class="font-medium text-gray-700">${this.capitalizeFirst(category)}</h3>
-                        </div>
-                    `;
+                if (forceRender) {
+                    container.innerHTML = '';
                     
-                    const itemsList = document.createElement('div');
-                    itemsList.className = 'bg-white rounded-lg overflow-hidden';
+                    // Group shopping list by category
+                    const groupedList = {};
+                    this.appData.shoppingList.forEach(item => {
+                        if (!groupedList[item.category]) {
+                            groupedList[item.category] = [];
+                        }
+                        groupedList[item.category].push(item);
+                    });
                     
-                    groupedList[category].forEach((item, index) => {
-                        const itemElement = document.createElement('div');
-                        itemElement.className = `flex items-center justify-between p-3 ${index !== 0 ? 'border-t border-gray-100' : ''}`;
-                        itemElement.innerHTML = `
-                            <div class="flex items-center">
-                                <div class="custom-checkbox mr-3 ${item.purchased ? 'checked' : ''}" data-id="${item.id}"></div>
-                                <div class="${item.purchased ? 'line-through text-gray-400' : ''}">
-                                    <div class="font-medium">${item.name}</div>
-                                    <div class="text-xs text-gray-500">${item.quantity} ${item.unit}</div>
-                                </div>
+                    // Render groups
+                    Object.keys(groupedList).forEach(category => {
+                        const categorySection = document.createElement('div');
+                        categorySection.className = 'mb-4';
+                        categorySection.dataset.category = category;
+                        categorySection.innerHTML = `
+                            <div class="flex items-center mb-2">
+                                <i class="fas ${this.getCategoryIcon(category)} mr-2 text-gray-600"></i>
+                                <h3 class="font-medium text-gray-700">${this.capitalizeFirst(category)}</h3>
                             </div>
                         `;
                         
-                        itemsList.appendChild(itemElement);
+                        const itemsList = document.createElement('div');
+                        itemsList.className = 'bg-white rounded-lg overflow-hidden';
                         
-                        // Add event listener to checkbox
-                        const checkbox = itemElement.querySelector('.custom-checkbox');
-                        checkbox.addEventListener('click', () => {
-                            const purchased = !item.purchased;
-                            this.appData.updateShoppingItem(item.id, purchased);
-                            checkbox.classList.toggle('checked', purchased);
-                            checkbox.parentElement.querySelector('div:last-child').classList.toggle('line-through', purchased);
-                            checkbox.parentElement.querySelector('div:last-child').classList.toggle('text-gray-400', purchased);
+                        groupedList[category].forEach((item, index) => {
+                            const itemElement = document.createElement('div');
+                            itemElement.className = `flex items-center justify-between p-3 ${index !== 0 ? 'border-t border-gray-100' : ''}`;
+                            itemElement.dataset.id = item.id;
+                            itemElement.innerHTML = `
+                                <div class="flex items-center">
+                                    <div class="custom-checkbox mr-3 ${item.purchased ? 'checked' : ''}" data-id="${item.id}"></div>
+                                    <div class="${item.purchased ? 'line-through text-gray-400' : ''}">
+                                        <div class="font-medium">${item.name}</div>
+                                        <div class="text-xs text-gray-500">${item.quantity} ${item.unit}</div>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            itemsList.appendChild(itemElement);
+                            
+                            // Add event listener to checkbox
+                            const checkbox = itemElement.querySelector('.custom-checkbox');
+                            checkbox.addEventListener('click', () => {
+                                const purchased = !item.purchased;
+                                this.appData.updateShoppingItem(item.id, purchased);
+                                checkbox.classList.toggle('checked', purchased);
+                                checkbox.parentElement.querySelector('div:last-child').classList.toggle('line-through', purchased);
+                                checkbox.parentElement.querySelector('div:last-child').classList.toggle('text-gray-400', purchased);
+                            });
                         });
+                        
+                        categorySection.appendChild(itemsList);
+                        container.appendChild(categorySection);
                     });
-                    
-                    categorySection.appendChild(itemsList);
-                    container.appendChild(categorySection);
-                });
+                } else {
+                    // Actualizar selectivamente los estados de compra sin recrear toda la lista
+                    this.appData.shoppingList.forEach(item => {
+                        const checkbox = container.querySelector(`.custom-checkbox[data-id="${item.id}"]`);
+                        if (checkbox) {
+                            const isChecked = checkbox.classList.contains('checked');
+                            if (isChecked !== item.purchased) {
+                                checkbox.classList.toggle('checked', item.purchased);
+                                const textElement = checkbox.parentElement.querySelector('div:last-child');
+                                textElement.classList.toggle('line-through', item.purchased);
+                                textElement.classList.toggle('text-gray-400', item.purchased);
+                            }
+                        }
+                    });
+                }
             }
             
             updateStockSummary() {
                 const summary = this.appData.getStockSummary();
                 
-                document.getElementById('totalProductsStock').textContent = summary.total;
-                document.getElementById('totalItemsAvailable').textContent = summary.totalItems;
-                document.getElementById('lowStockCount').textContent = summary.lowStock;
-                document.getElementById('outOfStockCount').textContent = summary.outOfStock;
+                // Actualizar números solo si han cambiado
+                const elements = {
+                    totalProductsStock: document.getElementById('totalProductsStock'),
+                    totalItemsAvailable: document.getElementById('totalItemsAvailable'),
+                    lowStockCount: document.getElementById('lowStockCount'),
+                    outOfStockCount: document.getElementById('outOfStockCount')
+                };
+                
+                if (elements.totalProductsStock.textContent !== summary.total.toString()) {
+                    elements.totalProductsStock.textContent = summary.total;
+                }
+                
+                if (elements.totalItemsAvailable.textContent !== summary.totalItems.toString()) {
+                    elements.totalItemsAvailable.textContent = summary.totalItems;
+                }
+                
+                if (elements.lowStockCount.textContent !== summary.lowStock.toString()) {
+                    elements.lowStockCount.textContent = summary.lowStock;
+                }
+                
+                if (elements.outOfStockCount.textContent !== summary.outOfStock.toString()) {
+                    elements.outOfStockCount.textContent = summary.outOfStock;
+                }
             }
             
             showProductModal(isEdit = false) {
@@ -1601,7 +1777,15 @@
                     `¿Estás seguro de que deseas eliminar "${product.name}"?`,
                     () => {
                         this.appData.deleteProduct(id);
-                        this.renderAll();
+                        // Remover elemento del DOM directamente
+                        const baseElement = document.getElementById(`base-${id}`);
+                        const stockElement = document.getElementById(`stock-${id}`);
+                        
+                        if (baseElement) baseElement.remove();
+                        if (stockElement) stockElement.remove();
+                        
+                        this.updateStockSummary();
+                        this.renderShoppingList(true);
                         this.showToast('Producto eliminado', 'success');
                     }
                 );
@@ -1635,7 +1819,9 @@
                     }
                     
                     this.hideProductModal();
-                    this.renderAll();
+                    this.updateStockSummary();
+                    this.renderBaseProducts();
+                    this.renderStockProducts();
                 }
             }
             
@@ -1662,14 +1848,30 @@
                 if (!isNaN(quantity) && this.currentProductId) {
                     this.appData.updateProduct(this.currentProductId, { stock: quantity });
                     this.hideStockModal();
-                    this.renderAll();
+                    
+                    // Actualizar solo los elementos relevantes
+                    const product = this.appData.getProduct(this.currentProductId);
+                    if (product) {
+                        const baseElement = document.getElementById(`base-${product.id}`);
+                        const stockElement = document.getElementById(`stock-${product.id}`);
+                        
+                        if (baseElement) {
+                            this.createOrUpdateProductElement(product, baseElement.parentNode, 'base');
+                        }
+                        
+                        if (stockElement) {
+                            this.createOrUpdateProductElement(product, stockElement.parentNode, 'stock');
+                        }
+                    }
+                    
+                    this.updateStockSummary();
                     this.showToast('Stock actualizado', 'success');
                 }
             }
             
             generateShoppingList() {
                 this.appData.generateShoppingList();
-                this.renderShoppingList();
+                this.renderShoppingList(true);
                 this.showToast('Lista de compra generada', 'success');
             }
             
@@ -1724,8 +1926,13 @@
             
             initSettings() {
                 // Set settings values
-                document.getElementById('lowStockThreshold').value = this.appData.settings.lowStockThreshold;
-                document.getElementById('thresholdValue').textContent = this.appData.settings.lowStockThreshold;
+                const threshold = document.getElementById('lowStockThreshold');
+                const thresholdValue = document.getElementById('thresholdValue');
+                
+                if (threshold.value !== this.appData.settings.lowStockThreshold.toString()) {
+                    threshold.value = this.appData.settings.lowStockThreshold;
+                    thresholdValue.textContent = this.appData.settings.lowStockThreshold;
+                }
                 
                 // Set theme toggle
                 const customCheckboxes = document.querySelectorAll('.custom-checkbox');
@@ -1738,12 +1945,27 @@
                 });
             }
             
-            renderAll() {
-                this.renderBaseProducts();
-                this.renderStockProducts();
-                this.renderShoppingList();
+            renderAll(forceRender = false) {
+                this.renderBaseProducts(forceRender);
+                this.renderStockProducts(forceRender);
+                this.renderShoppingList(forceRender);
                 this.updateStockSummary();
                 this.initSettings();
+            }
+            
+            // Método optimizado para sincronizar datos de manera eficiente
+            syncData() {
+                if (this.appData.hasChanged()) {
+                    // Solo renderizar lo que se está visualizando actualmente
+                    if (this.currentPage === 'basePage') {
+                        this.renderBaseProducts();
+                    } else if (this.currentPage === 'stockPage') {
+                        this.updateStockSummary();
+                        this.renderStockProducts();
+                    } else if (this.currentPage === 'shoppingPage') {
+                        this.renderShoppingList();
+                    }
+                }
             }
             
             // Helper methods
@@ -1794,6 +2016,14 @@
                 
                 this.showToast('Datos exportados correctamente', 'success');
             }
+            
+            // Método para comparar arrays
+            arraysEqual(a, b) {
+                if (a.length !== b.length) return false;
+                const sortedA = [...a].sort();
+                const sortedB = [...b].sort();
+                return sortedA.every((val, i) => val === sortedB[i]);
+            }
         }
         
         // Initialize the app when DOM is loaded
@@ -1801,27 +2031,11 @@
             const appData = new AppData();
             const app = new AppUI(appData);
             
-            // Add some demo products if there are none
-            if (appData.products.length === 0) {
-                const demoProducts = [
-                    { name: 'Manzanas', category: 'frutas', unit: 'kg', minStock: 2, stock: 1 },
-                    { name: 'Leche', category: 'lacteos', unit: 'l', minStock: 2, stock: 1 },
-                    { name: 'Pan', category: 'otros', unit: 'unidad', minStock: 2, stock: 0 },
-                    { name: 'Pollo', category: 'carnes', unit: 'kg', minStock: 1, stock: 0.5 },
-                    { name: 'Tomates', category: 'verduras', unit: 'kg', minStock: 1, stock: 2 },
-                    { name: 'Queso', category: 'lacteos', unit: 'g', minStock: 300, stock: 150 }
-                ];
-                
-                demoProducts.forEach(product => {
-                    appData.addProduct(product);
-                });
-                
-                app.renderAll();
-            }
+          
             
-            // Verificar y sincronizar datos entre páginas cada 5 segundos
+            // Sincronización optimizada cada 5 segundos sin parpadeo
             setInterval(() => {
-                app.renderAll();
+                app.syncData();
             }, 5000);
         });
     </script>
